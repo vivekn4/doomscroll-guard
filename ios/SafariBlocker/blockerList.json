@@ -1,0 +1,27 @@
+[
+  {
+    "trigger": {
+      "url-filter": ".*",
+      "if-domain": [
+        "m.youtube.com",
+        "www.youtube.com"
+      ]
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": "ytm-reel-shelf-renderer, ytm-pivot-bar-item-renderer:has(.pivot-shorts), a[href^=\"/shorts\"]"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*",
+      "if-domain": [
+        "www.instagram.com"
+      ]
+    },
+    "action": {
+      "type": "css-display-none",
+      "selector": "a[href^=\"/reels\"], svg[aria-label=\"Reels\"]"
+    }
+  }
+]
