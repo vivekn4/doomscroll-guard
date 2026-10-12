@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget layout. RemoteViews-compatible views only
+  (LinearLayout / TextView — no custom views, no <merge>).
+  widget_toggle = the big one-tap switch. widget_status / widget_root open the app.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="12dp"
+    android:background="#CC101218">
+
+    <TextView
+        android:id="@+id/widget_toggle"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="○ GUARD OFF"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:background="#2A2F3A"
+        android:padding="8dp" />
+
+    <TextView
+        android:id="@+id/widget_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Tap to block Shorts &amp; Reels"
+        android:textSize="11sp"
+        android:textColor="#9AA3B2"
+        android:paddingTop="6dp" />
+
+</LinearLayout>

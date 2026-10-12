@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Service config. packageNames is intentionally NOT hardcoded here — the enabled
+  set changes with the user's toggles, so the service updates it at runtime via
+  setServiceInfo(). The static list below is the full known set (superset).
+  notificationTimeout throttles the event firehose; the 600ms debounce lives in
+  RuleEngine.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewScrolled"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagReportViewIds|flagIncludeNotImportantViews"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/accessibility_service_description"
+    android:notificationTimeout="100"
+    android:packageNames="com.google.android.youtube,app.revanced.android.youtube,com.vanced.android.youtube,com.instagram.android,com.zhiliaoapp.musically,com.snapchat.android,com.facebook.katana" />

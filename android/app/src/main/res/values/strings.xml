@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Doomscroll Guard</string>
+    <string name="accessibility_service_description">Doomscroll Guard watches for short-form video surfaces (Shorts, Reels, Spotlight) inside the apps you selected, so it can close them when your switch is on. It only reads window content from those apps, and nothing leaves your device.</string>
+    <string name="disclosure_title">How blocking works</string>
+    <string name="disclosure_body">To close Shorts and Reels inside other apps, Doomscroll Guard needs the Accessibility permission. With it, the app can see which screen is open in YouTube, Instagram, TikTok, Snapchat and Facebook — only to detect short-form video players. It cannot see passwords or message contents, and no data ever leaves your phone. You can turn the service off at any time in Android Settings → Accessibility.</string>
+    <string name="disclosure_agree">I understand — continue</string>
+    <string name="disclosure_decline">Not now</string>
+    <string name="widget_description">One-tap Doomscroll Guard switch — toggle Shorts &amp; Reels blocking from your home screen.</string>
+</resources>
