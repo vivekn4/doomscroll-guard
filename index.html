@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VN Doomscroll Guard — One Switch. No More Doomscrolling.</title>
+<meta name="description" content="🛡️ VN Doomscroll Guard — one switch that removes Shorts, Reels & TikTok. Free, open-source, Android + iOS.">
+<style>
+:root{--gold:#F5C518;--green:#34D399;--ink:#0B0D12;--card:#141821;--mut:#9AA3B2;--pink:#F472B6}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{background:var(--ink);color:#fff;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;overflow-x:hidden}
+#fx{position:fixed;inset:0;z-index:0;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 22px}
+.hero{min-height:92vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 22px}
+.vn-tag{display:inline-block;border:1px solid var(--gold);color:var(--gold);border-radius:999px;padding:6px 18px;font-size:13px;letter-spacing:.25em;margin-bottom:22px}
+h1{font-size:clamp(38px,7vw,74px);font-weight:900;line-height:1.05;letter-spacing:-.02em}
+h1 .gold{color:var(--gold);text-shadow:0 0 34px rgba(245,197,24,.45)}
+h1 .green{color:var(--green);text-shadow:0 0 34px rgba(52,211,153,.45)}
+.sub{color:var(--mut);font-size:clamp(15px,2.4vw,19px);max-width:640px;margin:20px auto 0;line-height:1.6}
+/* the demo switch */
+.switch-demo{margin:44px 0 10px;user-select:none;cursor:pointer}
+.switch-face{width:min(420px,84vw);border-radius:28px;padding:38px 20px;font-size:30px;font-weight:900;letter-spacing:.04em;transition:all .25s;border:2px solid #2A2F3A;background:#161B26;color:#8b93a5}
+.switch-demo.on .switch-face{background:linear-gradient(180deg,#0f2e23,#0c231b);border-color:var(--green);color:var(--green);box-shadow:0 0 60px rgba(52,211,153,.35)}
+.switch-sub{color:var(--mut);margin-top:14px;font-size:15px;min-height:24px}
+.cta-row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:26px}
+.btn{display:inline-block;padding:15px 30px;border-radius:14px;font-weight:800;font-size:16px;text-decoration:none;transition:transform .15s}
+.btn:hover{transform:translateY(-2px)}
+.btn.gold{background:linear-gradient(180deg,#F5C518,#b78d0a);color:#141005}
+.btn.ghost{border:1px solid #2A2F3A;color:#fff;background:#161B26}
+.sec{padding:70px 0}
+.sec h2{font-size:clamp(26px,4.5vw,40px);font-weight:900;text-align:center;margin-bottom:14px}
+.sec .lede{color:var(--mut);text-align:center;max-width:640px;margin:0 auto 36px;line-height:1.6}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.card{background:var(--card);border:1px solid #232a3a;border-radius:20px;padding:28px}
+.card h3{font-size:20px;margin-bottom:12px}
+.card ul{list-style:none;display:grid;gap:10px;font-size:15px;color:#d5dae4}
+.yes{color:var(--green);font-weight:800}.warn{color:var(--gold);font-weight:800}.no{color:var(--pink);font-weight:800}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;counter-reset:step}
+.step{background:var(--card);border:1px solid #232a3a;border-radius:20px;padding:26px;position:relative}
+.step::before{counter-increment:step;content:counter(step);position:absolute;top:-16px;left:22px;background:var(--gold);color:#141005;font-weight:900;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.step h4{margin:6px 0 10px;font-size:17px}
+.step p{color:var(--mut);font-size:14px;line-height:1.6}
+.faq{max-width:720px;margin:0 auto;display:grid;gap:12px}
+.faq details{background:var(--card);border:1px solid #232a3a;border-radius:14px;padding:18px 20px}
+.faq summary{cursor:pointer;font-weight:700;font-size:16px}
+.faq p{color:var(--mut);font-size:14px;line-height:1.65;margin-top:10px}
+.foot{text-align:center;padding:50px 20px;color:var(--mut);font-size:13px;border-top:1px solid #1a1f2b;margin-top:40px}
+.foot .sig{color:var(--gold);letter-spacing:.3em;margin-top:10px}
+@media(max-width:560px){.switch-face{font-size:24px;padding:30px 14px}}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<div class="wrap">
+
+  <header class="hero">
+    <span class="vn-tag">✦ VN ✦</span>
+    <h1><span class="gold">ONE SWITCH.</span><br><span class="green">NO MORE DOOMSCROLLING.</span></h1>
+    <p class="sub">Doomscroll Guard removes YouTube Shorts, Instagram Reels, TikTok &amp; Spotlight the moment they open — while the rest of your apps keep working. Free. Open-source. Nothing leaves your phone.</p>
+    <div class="switch-demo" id="demoSwitch" role="switch" aria-checked="false" tabindex="0" aria-label="Demo guard switch">
+      <div class="switch-face" id="demoFace">○ GUARD OFF</div>
+      <div class="switch-sub" id="demoSub">tap it. feel the calm.</div>
+    </div>
+    <div class="cta-row">
+      <a class="btn gold" href="https://github.com/vivekn4/doomscroll-guard/releases">⬇ Get the Android APK</a>
+      <a class="btn ghost" href="https://github.com/vivekn4/doomscroll-guard">★ GitHub repo</a>
+    </div>
+  </header>
+
+  <section class="sec">
+    <h2>What each phone can honestly do</h2>
+    <p class="lede">No marketing fog. The two platforms need completely different tricks — here's exactly what you get on each.</p>
+    <div class="cards">
+      <div class="card">
+        <h3>🤖 Android <span style="color:var(--green);font-size:13px">V1 · PRIMARY</span></h3>
+        <ul>
+          <li><span class="yes">✅</span> Closes Shorts/Reels <b>inside</b> the real apps</li>
+          <li><span class="yes">✅</span> Feed, Stories &amp; DMs keep working</li>
+          <li><span class="yes">✅</span> Home-screen widget — one-tap switch</li>
+          <li><span class="yes">✅</span> Quick Settings tile</li>
+          <li><span class="yes">✅</span> TikTok blocked whole-app</li>
+          <li><span class="warn">⚠️</span> You flip one system switch in Settings (guided, 30 sec)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🍎 iPhone</h3>
+        <ul>
+          <li><span class="yes">✅</span> Stripped in-app browser — no Shorts/Reels</li>
+          <li><span class="yes">✅</span> Can lock the native apps via Screen Time*</li>
+          <li><span class="warn">⚠️</span> *Needs Apple's entitlement approval</li>
+          <li><span class="no">❌</span> Cannot remove the Reels tab <b>inside</b> Instagram.app — Apple gives no app that power</li>
+          <li><span class="no">❌</span> Same for the Shorts tab inside YouTube.app</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>On your phone in under a minute</h2>
+    <p class="lede">Three steps. Plain language. Zero jargon.</p>
+    <div class="steps">
+      <div class="step"><h4>The switch</h4><p>Open the app, read the plain-language disclosure, tap <i>I understand</i>. That's the whole consent flow.</p></div>
+      <div class="step"><h4>One system flip</h4><p>Android asks <b>you</b> to enable the Guard in Settings — apps can't do it themselves. 30 seconds, guided.</p></div>
+      <div class="step"><h4>Done. Add the widget</h4><p>Long-press your home screen → Widgets → Doomscroll Guard. One tap toggles everything, forever.</p></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Straight answers</h2>
+    <div class="faq">
+      <details><summary>Does it spy on me?</summary><p>No. The Android app reads which screen is open in five apps — only to spot short-video players. No accounts, no servers, no analytics, no ads. The code is open source; go read it.</p></details>
+      <details><summary>Why can't the iPhone version do what Android does?</summary><p>Apple provides no API for one app to see or change another app's interface — there is no iOS equivalent of Android's AccessibilityService. So on iPhone you get a stripped built-in browser plus optional whole-app Screen Time locks. Anyone promising more on iOS is selling you something.</p></details>
+      <details><summary>What about TikTok?</summary><p>TikTok is 100% short-form video — there is no "TikTok without short videos." The TikTok switch blocks (Android) or locks (iOS) the app itself.</p></details>
+      <details><summary>Can my kid just turn it off?</summary><p>Yes — anyone with the device PIN can disable the permissions. This is a friction tool for willing users, not parental-control software or a kiosk.</p></details>
+      <details><summary>Will it break when YouTube updates?</summary><p>Possibly, temporarily. Detection relies on YouTube/Instagram's internal layouts, which change without notice. Rule updates ship without an app update — the app fetches the new bundle itself.</p></details>
+      <details><summary>Is it really free?</summary><p>MIT-licensed, yes. No premium tier, no "pro" unlock, no ads. If someone charges you for Doomscroll Guard, it's a scam — get it from the GitHub repo.</p></details>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div>Doomscroll Guard · MIT License · <a href="https://github.com/vivekn4/doomscroll-guard" style="color:var(--gold)">github.com/vivekn4/doomscroll-guard</a></div>
+    <div class="sig">✦ VN ✦</div>
+  </footer>
+
+</div>
+<script>
+'use strict';
+/* VN landing page: canvas particles + WebAudio toggle SFX. No dependencies. */
+const cv=document.getElementById('fx'),ctx=cv.getContext('2d');let W,H,ps=[];
+function size(){W=cv.width=innerWidth;H=cv.height=innerHeight}
+size();addEventListener('resize',size);
+for(let i=0;i<70;i++)ps.push({x:Math.random(),y:Math.random(),r:Math.random()*2.2+.6,s:Math.random()*.0006+.0002,o:Math.random()*.5+.15,hue:Math.random()<.5?45:160});
+(function tick(){ctx.clearRect(0,0,W,H);for(const p of ps){p.y-=p.s;if(p.y<-.02)p.y=1.02;ctx.beginPath();ctx.arc(p.x*W,p.y*H,p.r,0,7);ctx.fillStyle=`hsla(${p.hue},90%,60%,${p.o})`;ctx.fill()}requestAnimationFrame(tick)})();
+// tiny synth: soft click on toggle
+let AC=null;
+function blip(on){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.value=on?660:330;g.gain.setValueAtTime(.12,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+.18);o.connect(g).connect(AC.destination);o.start();o.stop(AC.currentTime+.2)}catch(e){}}
+const sw=document.getElementById('demoSwitch'),face=document.getElementById('demoFace'),sub=document.getElementById('demoSub');
+function flip(){const on=!sw.classList.contains('on');sw.classList.toggle('on',on);sw.setAttribute('aria-checked',on);face.textContent=on?'✓ GUARD ON':'○ GUARD OFF';sub.textContent=on?'ahh. the feed can wait.':'tap it. feel the calm.';blip(on)}
+sw.addEventListener('click',flip);
+sw.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();flip()}});
+</script>
+</body>
+</html>
