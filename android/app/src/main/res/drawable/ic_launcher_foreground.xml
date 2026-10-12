@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- VN shield mark -->
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M54,14 L84,25 V53 C84,73 71,87 54,94 C37,87 24,73 24,53 V25 Z" />
+    <path
+        android:fillColor="#0B1220"
+        android:pathData="M40,56 L46,62 L68,40 L68,47 L46,69 L40,63 Z" />
+</vector>
