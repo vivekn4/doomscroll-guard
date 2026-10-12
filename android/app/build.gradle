@@ -1,0 +1,35 @@
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
+
+android {
+    namespace = "com.vn.doomscrollguard"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.vn.doomscrollguard"
+        minSdk = 26          // AccessibilityService view-ID APIs need 18+; 26 keeps the code modern
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0.0"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = "17" }
+}
+
+// Zero third-party SDKs by design: only androidx.core (notifications/compat) —
+// no analytics, no ads, no telemetry. Fewer deps = smaller APK, easier F-Droid review.
+dependencies {
+    implementation("androidx.core:core:1.13.1")
+}
