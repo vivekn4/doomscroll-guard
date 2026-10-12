@@ -45,7 +45,8 @@ has not yet been run on a physical device (see "What's validated" below).*
 ## Install
 
 ### Android (V1 — primary)
-1. Get the APK from **GitHub Releases** (or F-Droid once listed).
+1. Get the APK from **[GitHub Releases](https://github.com/vivekn4/doomscroll-guard/releases/tag/latest)** — download `app-debug.apk` (auto-built from the latest code on every push).
+   When installing, allow "install unknown apps" for your browser when prompted — normal for sideloading; the APK is signed with the debug key.
 2. Open the app — the 3-step wizard walks you through: the plain-language disclosure
    (tap *I understand*), enabling the Guard in system Settings, done.
 3. Long-press your home screen → **Widgets → Doomscroll Guard** for the one-tap switch.
