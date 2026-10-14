@@ -22,6 +22,9 @@ class GuardAccessibilityService : AccessibilityService() {
     private lateinit var engine: RuleEngine
     private var bundle: RuleBundle? = null
 
+    /** Timestamps (uptime ms) of recent interventions, per target. */
+    private val recentHits = mutableMapOf<String, ArrayDeque<Long>>()
+
     override fun onServiceConnected() {
         repo = RuleRepository(this)
         reloadBundle()
@@ -67,7 +70,10 @@ class GuardAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (!repo.isMasterEnabled()) return
+        // Timed states resolve here too, so a late alarm can only delay a
+        // resume/turn-off, never lose it.
+        PauseManager.resumeIfDue(this)
+        if (!GuardState.isEffectivelyOn(this)) return
         val b = bundle ?: return
         val pkg = event.packageName?.toString() ?: return
         when (event.eventType) {
@@ -83,6 +89,8 @@ class GuardAccessibilityService : AccessibilityService() {
             null
         } ?: return
 
+        BlockStats.recordBlock(this, hit.target.id)
+
         when (hit.target.intervention) {
             Intervention.BACK -> performGlobalAction(GLOBAL_ACTION_BACK)
             Intervention.HOME -> performGlobalAction(GLOBAL_ACTION_HOME)
@@ -91,6 +99,28 @@ class GuardAccessibilityService : AccessibilityService() {
                 ShieldOverlayService.show(this, hit.target.label)
             }
         }
+
+        // Rapid-retry friction: if the user reopens the same blocked
+        // surface 3+ times within a minute, the plain bounce-out isn't
+        // landing — show the longer shield with a "Pause 15 min instead"
+        // escape valve. The bounce-out above still applies.
+        if (isRapidRetry(hit.target.id)) {
+            ShieldOverlayService.showExtended(this, hit.target.label)
+        }
+    }
+
+    /**
+     * True when this is the 3rd (or later) intervention for the target
+     * within [RAPID_RETRY_WINDOW_MS]. Rolling window, per target.
+     */
+    private fun isRapidRetry(targetId: String): Boolean {
+        val now = android.os.SystemClock.uptimeMillis()
+        val queue = recentHits.getOrPut(targetId) { ArrayDeque() }
+        while (queue.isNotEmpty() && now - queue.first() > RAPID_RETRY_WINDOW_MS) {
+            queue.removeFirst()
+        }
+        queue.addLast(now)
+        return queue.size >= RAPID_RETRY_THRESHOLD
     }
 
     override fun onInterrupt() { /* nothing latched; safe to no-op */ }
@@ -105,6 +135,10 @@ class GuardAccessibilityService : AccessibilityService() {
     companion object {
         const val ACTION_STATE_CHANGED = "com.vn.doomscrollguard.STATE_CHANGED"
         const val ACTION_RELOAD = "com.vn.doomscrollguard.RELOAD_RULES"
+
+        /** Rapid-retry window + threshold for the extended shield. */
+        const val RAPID_RETRY_WINDOW_MS = 60 * 1000L
+        const val RAPID_RETRY_THRESHOLD = 3
 
         /** True when the user has flipped the switch in Android Settings. */
         fun isServiceEnabled(context: android.content.Context): Boolean {

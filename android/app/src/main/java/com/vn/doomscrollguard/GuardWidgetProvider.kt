@@ -60,9 +60,11 @@ class GuardWidgetProvider : AppWidgetProvider() {
             R.id.widget_toggle,
             if (on) "✓ GUARD ON" else "○ GUARD OFF",
         )
+        val today = BlockStats.todayBlocks(context)
         views.setTextViewText(
             R.id.widget_status,
-            if (on) "Shorts & Reels blocked" else "Tap to block Shorts & Reels",
+            if (on) "Shorts & Reels blocked · $today blocked today"
+            else "Tap to block Shorts & Reels",
         )
         // RemoteViews can't tint at runtime pre-31 cleanly; swap text color instead.
         val accent = if (on) 0xFF34D399.toInt() else 0xFFFFFFFF.toInt()

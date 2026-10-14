@@ -31,11 +31,29 @@ class ShieldOverlayService : Service() {
     companion object {
         private const val CHANNEL = "guard_shield"
         private const val EXTRA_LABEL = "label"
+        private const val EXTRA_EXTENDED = "extended"
+        private const val DISMISS_MS = 4000L
+        private const val EXTENDED_DISMISS_MS = 10000L
 
         fun show(context: Context, label: String) {
             if (!Settings.canDrawOverlays(context)) return
             val i = Intent(context, ShieldOverlayService::class.java)
                 .putExtra(EXTRA_LABEL, label)
+                .putExtra(EXTRA_EXTENDED, false)
+            if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(i)
+            else context.startService(i)
+        }
+
+        /**
+         * The rapid-retry shield: longer hold + a "Pause 15 min" escape
+         * valve, for when the plain bounce-out isn't landing. Shown after
+         * the bounce-out, never instead of it.
+         */
+        fun showExtended(context: Context, label: String) {
+            if (!Settings.canDrawOverlays(context)) return
+            val i = Intent(context, ShieldOverlayService::class.java)
+                .putExtra(EXTRA_LABEL, label)
+                .putExtra(EXTRA_EXTENDED, true)
             if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(i)
             else context.startService(i)
         }
@@ -65,11 +83,12 @@ class ShieldOverlayService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val label = intent?.getStringExtra(EXTRA_LABEL) ?: "short-form video"
-        showOverlay(label)
+        val extended = intent?.getBooleanExtra(EXTRA_EXTENDED, false) ?: false
+        showOverlay(label, extended)
         return START_NOT_STICKY
     }
 
-    private fun showOverlay(label: String) {
+    private fun showOverlay(label: String, extended: Boolean = false) {
         dismissOverlay()
         wm = getSystemService(WindowManager::class.java)
         val root = LinearLayout(this).apply {
@@ -85,7 +104,12 @@ class ShieldOverlayService : Service() {
             gravity = Gravity.CENTER
         }
         val body = TextView(this).apply {
-            text = "You turned $label off.\nTake a breath — the feed will wait."
+            text = if (extended)
+                "You turned $label off — and came back a few times in a row.\n" +
+                "Take a breath. If you really need it, pause the Guard\n" +
+                "for 15 minutes — it turns itself back on."
+            else
+                "You turned $label off.\nTake a breath — the feed will wait."
             textSize = 17f
             setTextColor(0xFFFFFFFF.toInt())
             gravity = Gravity.CENTER
@@ -96,6 +120,18 @@ class ShieldOverlayService : Service() {
             setOnClickListener { dismissOverlay(); stopSelf() }
         }
         root.addView(title); root.addView(body); root.addView(done)
+        if (extended) {
+            val pause = Button(this).apply {
+                text = "Pause the Guard for 15 min"
+                setOnClickListener {
+                    // If a pause isn't allowed yet (minimum gap), the
+                    // shield just closes — the Guard stays on.
+                    PauseManager.startPause(this@ShieldOverlayService)
+                    dismissOverlay(); stopSelf()
+                }
+            }
+            root.addView(pause)
+        }
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -110,7 +146,10 @@ class ShieldOverlayService : Service() {
         wm?.addView(root, params)
         view = root
         // Auto-dismiss: a shield is friction, not a trap.
-        root.postDelayed({ dismissOverlay(); stopSelf() }, 4000)
+        root.postDelayed(
+            { dismissOverlay(); stopSelf() },
+            if (extended) EXTENDED_DISMISS_MS else DISMISS_MS,
+        )
     }
 
     private fun dismissOverlay() {

@@ -14,26 +14,67 @@ import android.os.VibratorManager
  * SharedPreferences is the source of truth, and every toggle re-broadcasts
  * [GuardAccessibilityService.ACTION_STATE_CHANGED] so the widget redraws
  * immediately no matter which surface flipped it.
+ *
+ * Weakening the Guard goes through friction, never a bare flip:
+ * - Turning OFF starts a short countdown ([OffDelayManager]) — the Guard
+ *   keeps blocking until it expires, and tapping again cancels it.
+ * - Turning ON cancels any pending turn-off and any active pause.
  */
 object GuardState {
 
     fun isOn(context: Context): Boolean =
         RuleRepository(context).isMasterEnabled()
 
-    /** Flip the master switch. Returns the new state. */
+    /** The service's view: on, and not inside a pending turn-off. */
+    fun isEffectivelyOn(context: Context): Boolean =
+        OffDelayManager.isEffectivelyOn(context)
+
+    /**
+     * Flip the master switch. Returns the new *effective* state.
+     * - ON -> starts the turn-off countdown (still blocking until it expires).
+     * - ON + countdown already running -> cancels the countdown (stays on).
+     * - OFF -> turns on immediately, cancelling any pause/delay.
+     */
     fun toggle(context: Context): Boolean {
         val repo = RuleRepository(context)
-        val next = !repo.isMasterEnabled()
-        repo.setMasterEnabled(next)
-        buzz(context)
-        broadcast(context)
-        return next
+        if (OffDelayManager.isPending(context)) {
+            OffDelayManager.cancel(context)
+            buzz(context)
+            return true
+        }
+        return if (repo.isMasterEnabled()) {
+            OffDelayManager.startDelay(context)
+            buzz(context)
+            true // still effectively on until the countdown expires
+        } else {
+            PauseManager.cancelPause(context)
+            repo.setMasterEnabled(true)
+            buzz(context)
+            broadcast(context)
+            true
+        }
     }
 
     fun setOn(context: Context, on: Boolean) {
-        RuleRepository(context).setMasterEnabled(on)
+        if (on) {
+            PauseManager.cancelPause(context)
+            OffDelayManager.cancel(context)
+            RuleRepository(context).setMasterEnabled(true)
+        } else {
+            // Never double-start a countdown that's already running.
+            if (!OffDelayManager.isPending(context) &&
+                RuleRepository(context).isMasterEnabled()
+            ) {
+                OffDelayManager.startDelay(context)
+            }
+        }
         buzz(context)
         broadcast(context)
+    }
+
+    /** The delay receiver / boot path applies the turn-off for real. */
+    fun applyPendingOffNow(context: Context) {
+        OffDelayManager.resolve(context)
     }
 
     fun broadcast(context: Context) {

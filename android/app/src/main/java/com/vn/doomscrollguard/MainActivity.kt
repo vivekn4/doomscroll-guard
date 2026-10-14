@@ -35,9 +35,25 @@ class MainActivity : Activity() {
     private lateinit var repo: RuleRepository
     private lateinit var bundle: RuleBundle
     private lateinit var statusText: TextView
+    private lateinit var statsText: TextView
     private lateinit var masterButton: TextView
+    private lateinit var pauseButton: TextView
+    private lateinit var delayText: TextView
     private lateinit var warnBanner: TextView
     private lateinit var appRows: LinearLayout
+
+    private val tickHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val tickRunnable = object : Runnable {
+        override fun run() {
+            refresh()
+            // Keep ticking only while a countdown is on screen.
+            if (OffDelayManager.isPending(this@MainActivity) ||
+                PauseManager.isPaused(this@MainActivity)
+            ) {
+                tickHandler.postDelayed(this, 1000)
+            }
+        }
+    }
 
     private val stateReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context?, i: Intent?) = refresh()
@@ -55,6 +71,18 @@ class MainActivity : Activity() {
 
         bundle = repo.load()
         buildUi()
+        // Watchdog: warn when the switch is on but the service died.
+        GuardWatchdogJob.schedule(this)
+        // The watchdog notification needs this on API 33+. If denied, the
+        // in-app banner still covers the same case — nothing breaks.
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(
+                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1
+            )
+        }
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(stateReceiver, IntentFilter(GuardAccessibilityService.ACTION_STATE_CHANGED),
                 RECEIVER_NOT_EXPORTED)
@@ -66,11 +94,23 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        if (::repo.isInitialized) refresh()
-        if (::repo.isInitialized && !coachShown()) showCoachMarks()
+        if (!::repo.isInitialized) return
+        // Resolve timed states on every entry — a late alarm can only
+        // delay a resume/turn-off, never lose it.
+        PauseManager.resumeIfDue(this)
+        OffDelayManager.resolve(this)
+        refresh()
+        if (!coachShown()) showCoachMarks()
+        tickHandler.post(tickRunnable)
+    }
+
+    override fun onPause() {
+        tickHandler.removeCallbacks(tickRunnable)
+        super.onPause()
     }
 
     override fun onDestroy() {
+        tickHandler.removeCallbacks(tickRunnable)
         try { unregisterReceiver(stateReceiver) } catch (_: Exception) { }
         super.onDestroy()
     }
@@ -104,7 +144,13 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setPadding(0, dp(8), 0, dp(4))
         }
-        col.addView(title); col.addView(statusText)
+        statsText = TextView(this).apply {
+            textSize = 14f
+            setTextColor(Color.parseColor("#8B93A3"))
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(4))
+        }
+        col.addView(title); col.addView(statusText); col.addView(statsText)
 
         warnBanner = TextView(this).apply {
             textSize = 14f
@@ -135,6 +181,37 @@ class MainActivity : Activity() {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         col.addView(masterWrap)
+
+        // Turn-off countdown: visible + cancellable, never a trap.
+        delayText = TextView(this).apply {
+            textSize = 15f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(Color.parseColor("#F5C518"))
+            gravity = Gravity.CENTER
+            setPadding(0, dp(4), 0, dp(4))
+            isClickable = true; isFocusable = true
+            setOnClickListener { OffDelayManager.cancel(this@MainActivity) }
+        }
+        col.addView(delayText)
+
+        // The humane off-switch: pause, then it turns itself back on.
+        pauseButton = TextView(this).apply {
+            textSize = 16f
+            setTypeface(typeface, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            setPadding(0, dp(14), 0, dp(14))
+            isClickable = true; isFocusable = true
+            background = rounded(Color.parseColor("#2A2F3A"), 20f)
+            setTextColor(Color.WHITE)
+            setOnClickListener { onPauseButton() }
+        }
+        val pauseWrap = LinearLayout(this).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(8), 0, dp(4))
+            addView(pauseButton, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        col.addView(pauseWrap)
 
         val appsLabel = TextView(this).apply {
             text = "Block short videos in:"
@@ -217,20 +294,79 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun onPauseButton() {
+        if (PauseManager.isPaused(this)) {
+            // "Resume now" — user changed their mind mid-pause.
+            PauseManager.cancelPause(this)
+            GuardState.setOn(this, true)
+            return
+        }
+        if (repo.isMasterEnabled()) {
+            if (!PauseManager.startPause(this)) {
+                // Inside the minimum gap: show the wait, don't silently fail.
+                val wait = PauseManager.millisUntilCanPause(this) / 1000
+                delayText.text = "Pause again in ${wait}s — one pause at a time."
+                delayText.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    private fun formatMmSs(ms: Long): String {
+        val total = (ms / 1000).toInt().coerceAtLeast(0)
+        return "%d:%02d".format(total / 60, total % 60)
+    }
+
     private fun refresh() {
         if (!::repo.isInitialized) return
         val on = repo.isMasterEnabled()
+        val paused = PauseManager.isPaused(this)
+        val pendingOff = OffDelayManager.isPending(this)
         val serviceUp = GuardAccessibilityService.isServiceEnabled(this)
 
-        statusText.text = if (on)
-            "Guard is ON — Shorts & Reels blocked"
-        else
-            "Guard is OFF — everything allowed"
+        if (on) BlockStats.markActiveDay(this)
+
+        statusText.text = when {
+            pendingOff -> "Guard is ON — turning off soon…"
+            paused -> "Guard is PAUSED — back on automatically"
+            on -> "Guard is ON — Shorts & Reels blocked"
+            else -> "Guard is OFF — everything allowed"
+        }
+
+        val today = BlockStats.todayBlocks(this)
+        val streak = BlockStats.currentStreakDays(this)
+        statsText.text = "Blocked today: $today  ·  🔥 $streak-day streak  ·  ✦ VN ✦"
 
         masterButton.text = if (on) "✓ GUARD ON" else "○ GUARD OFF"
         masterButton.setTextColor(if (on) Color.parseColor("#101218") else Color.WHITE)
         masterButton.background = rounded(
             if (on) Color.parseColor("#34D399") else Color.parseColor("#2A2F3A"), 24f)
+
+        if (pendingOff) {
+            val secs = (OffDelayManager.pendingRemainingMs(this) / 1000).toInt() + 1
+            delayText.visibility = View.VISIBLE
+            delayText.text = "Turning off in ${secs}s — tap here to KEEP the Guard on"
+        } else if (paused) {
+            delayText.visibility = View.VISIBLE
+            delayText.text = "Paused — Guard turns back on in " +
+                formatMmSs(PauseManager.pauseRemainingMs(this))
+        } else {
+            delayText.visibility = View.GONE
+        }
+
+        when {
+            paused -> {
+                pauseButton.visibility = View.VISIBLE
+                pauseButton.text = "▶ RESUME NOW"
+            }
+            on -> {
+                pauseButton.visibility = View.VISIBLE
+                pauseButton.text =
+                    if (PauseManager.canPause(this)) "⏸ PAUSE 15 MIN"
+                    else "⏸ PAUSE — available in " +
+                        formatMmSs(PauseManager.millisUntilCanPause(this))
+            }
+            else -> pauseButton.visibility = View.GONE
+        }
 
         if (!serviceUp) {
             warnBanner.visibility = View.VISIBLE
