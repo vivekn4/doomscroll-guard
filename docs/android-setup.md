@@ -13,6 +13,12 @@ cd android
 Sign it with your own key (`apksigner`) before distributing. The repo ships no
 keystore and no signing config — never commit one.
 
+No-Gradle fallback (used when the Gradle daemon can't run, e.g. sandboxed
+environments): `teardown/manual/build-manual.sh` runs the same steps by hand
+(aapt2 compile+link → kotlinc → d8 → zipalign → apksigner). It needs the
+Android SDK platform + build-tools 34 and downloads kotlinc + androidx
+artifacts on first run.
+
 ## Install
 
 1. Copy the APK to the phone, tap it, allow "Install unknown apps" for your
@@ -28,6 +34,22 @@ keystore and no signing config — never commit one.
    One tap toggles the Guard; tapping the status line opens the app.
 4. Optional: add the **Quick Settings tile** — swipe down twice, tap the pencil,
    drag "Doomscroll Guard" into your tiles.
+5. On first open, the app asks for **notification permission** (Android 13+).
+   Grant it if you want the watchdog's "Guard is off — tap to fix" alerts;
+   declining only loses the notification — the in-app banner covers the same case.
+
+## Friction features (pause, turn-off delay, watchdog)
+
+- **Pause 15 min** (main screen, shield, or "Pause" in the extended shield):
+  the Guard turns itself back on when the timer ends. One pause at a time,
+  30-minute gap between pauses. If a pause ever fails to resume (alarm lost),
+  just open the app — every entry point re-checks and resumes it.
+- **Turn-off delay:** tapping the switch OFF starts a 10-second countdown.
+  Tap the countdown text (or the widget/tile again) to cancel and stay on.
+- **Watchdog:** if the switch is on but the accessibility service got turned
+  off (system cleanup, OEM battery saver, manual toggle), a notification
+  offers a one-tap fix. The job runs every 15 min via JobScheduler and is
+  re-armed on boot.
 
 ## Re-verifying detection (when YouTube/Instagram update their UI)
 

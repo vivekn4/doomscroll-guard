@@ -82,6 +82,47 @@ affirmative consent, listing documentation, and a demo video — accepting revie
 
 ---
 
+## 2b. Friction layer (teardown upgrades, 2026-10-13)
+
+The failure mode of every blocker is the impulse toggle — the user opens the
+blocker *because* they want to scroll. Three peer open-source blockers were
+torn down (Curbox Detox, DetoxDroid, Zenwell — see `teardown/TEARDOWN_NOTES.md`;
+mechanisms re-implemented in original code, nothing copied). The shared
+lesson: weakening the Guard must require intention, and the Guard must
+never fail silently. Five additions, all local-only, all surviving reboot:
+
+1. **Pause with auto-resume + minimum gap** (`PauseManager`, `PauseResumeReceiver`,
+   `BootReceiver`). "Pause 15 min" turns the master off now and back on when the
+   timer ends. One pause at a time; 30-minute gap between pause starts.
+   Resume is scheduled with an inexact alarm AND re-checked on every entry
+   point (service, main screen, boot, alarm), so a late alarm only delays
+   the resume, never loses it.
+2. **Turn-off delay** (`OffDelayManager`, `OffDelayReceiver`). Turning the master
+   off starts a 10-second countdown with a visible, one-tap Cancel (main
+   screen; tapping the widget/tile again also cancels). The Guard keeps
+   blocking for the whole countdown. Same alarm + re-check robustness as pause.
+3. **Block counter + clean streak** (`BlockStats`). Every intervention bumps a
+   per-day counter; a day counts toward the streak when the Guard blocked
+   something OR was simply on (marked from the main screen). Shown on the
+   main screen and the widget — counters turn an invisible service into a
+   visible win.
+4. **Watchdog** (`GuardWatchdogJob`). Periodic JobScheduler check (15 min):
+   if the master is on but the accessibility service is disabled, post a
+   tap-to-fix notification (needs POST_NOTIFICATIONS, requested on first
+   main-screen open; the in-app banner covers the denied case).
+5. **Rapid-retry friction** (service hit path + `ShieldOverlayService.showExtended`).
+   3rd+ intervention for the same target within 60s shows the shield for
+   10s (instead of 4s) with a "Pause 15 min instead" escape valve — the
+   bounce-out still applies first. Never a trap: the shield always
+   auto-dismisses and always has a dismiss button.
+
+Deliberately NOT built (observed in teardown, rejected with reasons in
+`teardown/TEARDOWN_NOTES.md`): granular UI hiding, device-admin tamper
+resistance, UsageStats polling loop, NFC/QR unlock friction, passphrase
+lock on settings.
+
+---
+
 ## 3. iOS approach (honest limits — cannot touch native apps)
 
 Apple provides **no API** to inspect or modify another app's UI. There is no iOS equivalent

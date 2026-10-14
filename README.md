@@ -14,6 +14,18 @@ has not yet been run on a physical device (see "What's validated" below).*
 
 - **One giant switch** — on: short-form video gets closed the moment it opens.
   Off: everything works normally.
+- **Pause 15 min** — the humane off-switch: the Guard turns itself back on
+  automatically. One pause at a time, with a 30-minute gap between pauses.
+- **Turn-off delay** — turning the Guard off takes 10 seconds, with a visible
+  countdown and a one-tap Cancel. The Guard keeps blocking for the whole
+  countdown, so "off" is a decision, not a reflex.
+- **Block counter + streak** — "Blocked today: N · 🔥 M-day streak" on the main
+  screen and the widget. A day counts when the Guard blocked something or was
+  simply on.
+- **Watchdog** — if the switch is on but the system turned the accessibility
+  service off, the app posts a tap-to-fix notification instead of failing silently.
+- **Rapid-retry shield** — reopen the same blocked surface 3+ times in a minute
+  and the shield stays up longer, with a "Pause 15 min instead" escape valve.
 - **Per-app toggles** in plain language — YouTube, Instagram, TikTok, Snapchat, Facebook.
 - **Home-screen widget** (Android) — one tap on your home screen flips the Guard.
 - **Quick Settings tile** (Android) — the same switch, one swipe away.
@@ -89,16 +101,23 @@ python3 tools/validate_rules.py
 
 ## What's validated vs. what needs a device
 
-**Validated here (no SDKs on this machine):**
+**Validated here:**
 - ✅ `shared/rules/rules.json` parses and passes `tools/validate_rules.py`
   (schema + regexes + ID uniqueness + intervention sanity — including a negative test
   proving the validator rejects bad bundles)
-- ✅ File structure complete; docs written against the researched sources
+- ✅ **Android app compiles and packages**: built with aapt2 + kotlinc 1.9.24 +
+  d8 + zipalign + apksigner (manual pipeline — the Gradle daemon cannot run in
+  this sandbox; see `teardown/manual/build-manual.sh`). Signature verifies
+  (v2+v3 schemes); all classes incl. the new friction modules confirmed in dex.
+- ✅ Python test suites green: `tests/mock_detection_tests.py` (50/50) and
+  `tests/friction_tests.py` (40/40: pause, turn-off delay, streak, rapid-retry)
 - ✅ iOS API details spot-checked (ShieldActionResponse cases, ManagedSettingsStore
   signatures, entitlement flow)
 
 **Needs on-device testing (honest list):**
-- 🔲 Compile the Kotlin app (needs Android SDK) and the Swift app (needs Xcode)
+- 🔲 Install the APK on a real phone and walk the real flows: pause/resume,
+  turn-off countdown + cancel, rapid-retry shield, watchdog notification,
+  widget counter, QS tile
 - 🔲 Dump live accessibility trees (`adb shell uiautomator dump`) to re-verify every
   view ID in the rule bundle against current YouTube/Instagram/TikTok/Snapchat builds
 - 🔲 Tune debounce/throttle; measure battery with Battery Historian

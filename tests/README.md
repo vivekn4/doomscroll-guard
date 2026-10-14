@@ -22,6 +22,17 @@ debounce) and runs it against synthetic accessibility trees:
 
 Run: `python3 tests/mock_detection_tests.py` (exit 0 = all green).
 
+## Friction-logic tests (new: pause, turn-off delay, streak, rapid-retry)
+
+`friction_tests.py` ports the *pure* logic of the new Kotlin managers
+(`PauseManager`, `OffDelayManager`, `BlockStats` streak counting, rapid-retry
+window) with a fake clock and in-memory prefs, and asserts the exact state
+machine: pause auto-resume at expiry, 30-min gap between pauses, cancel
+paths, 10-second delay with cancel, streak forgiveness for "today not yet
+marked", gap breaking a streak, 3-in-60s rapid-retry trigger + window expiry.
+
+Run: `python3 tests/friction_tests.py` (exit 0 = all green, 40 cases).
+
 ## Rule-bundle validator
 
 `../tools/validate_rules.py` checks `shared/rules/rules.json` against
